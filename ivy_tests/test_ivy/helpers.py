@@ -1590,3 +1590,53 @@ def num_positional_args(draw, fn_name: str = None):
     return draw(
         integers(min_value=num_positional_only, max_value=(total - num_keyword_only))
     )
+
+
+
+@st.composite
+def get_num_axis(draw, shape, num, allow_none=False):
+    axes = len(shape)
+    if allow_none:
+        axis = draw(
+            st.none()
+            | st.lists(
+                st.integers(0, axes - 1),
+                min_size=num,
+                max_size=num,
+                unique_by=lambda x: shape[x],
+            )
+        )
+    else:
+        axis = draw(st.lists(
+                st.integers(0, axes - 1),
+                min_size=num,
+                max_size=num,
+                unique_by=lambda x: shape[x],
+            )
+        )
+    if type(axis) == list:
+
+        def sort_key(ele, max_len):
+            if ele < 0:
+                return ele + max_len - 1
+            return ele
+
+        axis.sort(key=(lambda ele: sort_key(ele, axes)))
+        axis = tuple(axis)
+    return axis
+
+
+@st.composite
+def shapes_and_axes(draw,
+                    allow_none=False,
+                    min_num_dims=0,
+                    max_num_dims=5,
+                    min_dim_size=1,
+                    max_dim_size=10,
+                    num=2):
+    shapes = list()
+    for _ in range(num):
+        shape = draw(get_shape(False, min_num_dims, max_num_dims, min_dim_size, max_dim_size))
+        shapes.append(shape)
+    axes = draw(get_num_axis(shapes[0], num, allow_none))
+    return shapes, axes
